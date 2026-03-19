@@ -1,31 +1,825 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Leaderboard</title>
+<!DOCTYPE html>
+
+<html lang="ko">
+
+<head>
+
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>House Price Prediction | 리더보드</title>
+
     <link rel="stylesheet" href="css/style.css" />
-  </head>
-  <body>
-    <main>
-      <h1>Leaderboard</h1>
 
-      <section id="submit">
-        <h2>Submit Predictions</h2>
-        <form id="submit-form">
-          <input type="text" id="username" placeholder="username" />
-          <input type="file" id="file" />
-          <button type="submit">Submit</button>
-        </form>
-        <div id="submit-result"></div>
-      </section>
+    <!-- Font Awesome -->
 
-      <section id="board">
-        <h2>Top</h2>
-        <ul id="leaderboard-list"></ul>
-      </section>
-    </main>
+    <link
 
-    <script src="js/app.js"></script>
-  </body>
+        rel="stylesheet"
+
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+
+    />
+
+</head>
+
+<body>
+
+
+
+<!-- ===================== NAVBAR ===================== -->
+
+<nav class="navbar">
+
+    <div class="navbar-brand">
+
+        <i class="fas fa-home"></i>
+
+        House Price Prediction
+
+    </div>
+
+    <div class="navbar-menu">
+
+        <a href="#leaderboard" class="nav-link active" data-tab="leaderboard">
+
+            <i class="fas fa-trophy"></i> 리더보드
+
+        </a>
+
+        <a href="#submit" class="nav-link" data-tab="submit">
+
+            <i class="fas fa-upload"></i> 제출
+
+        </a>
+
+        <a href="#my-submissions" class="nav-link" data-tab="my-submissions">
+
+            <i class="fas fa-list"></i> 내 제출 목록
+
+        </a>
+
+    </div>
+
+    <div class="navbar-auth">
+
+        <!-- 비로그인 상태 -->
+
+        <div id="auth-buttons">
+
+            <button class="btn btn-outline" onclick="openModal('login-modal')">
+
+                로그인
+
+            </button>
+
+            <button class="btn btn-primary" onclick="openModal('register-modal')">
+
+                회원가입
+
+            </button>
+
+        </div>
+
+        <!-- 로그인 상태 -->
+
+        <div id="user-info" class="hidden">
+
+            <span id="username-display"></span>
+
+            <span id="rank-badge" class="rank-badge"></span>
+
+            <button class="btn btn-outline btn-sm" onclick="logout()">
+
+                로그아웃
+
+            </button>
+
+        </div>
+
+    </div>
+
+</nav>
+
+
+
+<!-- ===================== MAIN ===================== -->
+
+<main class="container">
+
+
+
+    <!-- 대회 소개 배너 -->
+
+    <section class="hero-banner">
+
+        <div class="hero-content">
+
+            <h1>🏠 서울시 아파트 실거래가 예측</h1>
+
+            <p>서울시 아파트 매매 실거래가를 가장 정확하게 예측하는 모델을 개발하세요.</p>
+
+            <div class="hero-stats">
+
+                <div class="stat-item">
+
+                    <span class="stat-value" id="total-participants">-</span>
+
+                    <span class="stat-label">참가자</span>
+
+                </div>
+
+                <div class="stat-item">
+
+                    <span class="stat-value" id="total-submissions">-</span>
+
+                    <span class="stat-label">총 제출 수</span>
+
+                </div>
+
+                <div class="stat-item">
+
+                    <span class="stat-value">RMSE</span>
+
+                    <span class="stat-label">평가 지표</span>
+
+                </div>
+
+                <div class="stat-item">
+
+                    <span class="stat-value">9,272</span>
+
+                    <span class="stat-label">테스트 샘플</span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- ── 탭: 리더보드 ── -->
+
+    <section id="tab-leaderboard" class="tab-content active">
+
+        <div class="section-header">
+
+            <h2><i class="fas fa-trophy"></i> Public 리더보드</h2>
+
+            <div class="header-actions">
+
+                <span class="update-time">
+
+                    마지막 업데이트: <span id="last-update">-</span>
+
+                </span>
+
+                <button class="btn btn-sm btn-outline" onclick="loadLeaderboard()">
+
+                    <i class="fas fa-sync-alt"></i> 새로고침
+
+                </button>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- 내 순위 카드 (로그인 시) -->
+
+        <div id="my-rank-card" class="my-rank-card hidden">
+
+            <div class="my-rank-info">
+
+                <span class="my-rank-label">내 현재 순위</span>
+
+                <span class="my-rank-value" id="my-rank-value">-</span>
+
+            </div>
+
+            <div class="my-rank-info">
+
+                <span class="my-rank-label">최고 RMSE</span>
+
+                <span class="my-rank-value" id="my-rmse-value">-</span>
+
+            </div>
+
+            <div class="my-rank-info">
+
+                <span class="my-rank-label">전체 참가자</span>
+
+                <span class="my-rank-value" id="my-total-value">-</span>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- 리더보드 테이블 -->
+
+        <div class="table-wrapper">
+
+            <table class="leaderboard-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th width="80">순위</th>
+
+                        <th>팀명 / 사용자</th>
+
+                        <th width="160">Public RMSE</th>
+
+                        <th width="120">제출 횟수</th>
+
+                        <th width="180">달성 시각</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="leaderboard-body">
+
+                    <tr>
+
+                        <td colspan="5" class="loading-cell">
+
+                            <i class="fas fa-spinner fa-spin"></i> 로딩 중...
+
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+
+        <!-- 페이지네이션 -->
+
+        <div class="pagination" id="leaderboard-pagination"></div>
+
+    </section>
+
+
+
+    <!-- ── 탭: 제출 ── -->
+
+    <section id="tab-submit" class="tab-content hidden">
+
+        <div class="section-header">
+
+            <h2><i class="fas fa-upload"></i> 결과 제출</h2>
+
+        </div>
+
+
+
+        <!-- 로그인 필요 안내 -->
+
+        <div id="submit-login-required" class="alert alert-warning hidden">
+
+            <i class="fas fa-exclamation-triangle"></i>
+
+            제출하려면 <a href="#" onclick="openModal('login-modal')">로그인</a>이 필요합니다.
+
+        </div>
+
+
+
+        <!-- 제출 폼 -->
+
+        <div id="submit-form-wrapper">
+
+            <!-- 일일 제출 현황 -->
+
+            <div class="submission-limit-card">
+
+                <div class="limit-info">
+
+                    <i class="fas fa-calendar-day"></i>
+
+                    오늘 남은 제출 횟수:
+
+                    <strong>
+
+                        <span id="remaining-count">-</span> /
+
+                        <span id="max-count">5</span>
+
+                    </strong>
+
+                </div>
+
+                <div class="limit-bar">
+
+                    <div class="limit-bar-fill" id="limit-bar-fill"></div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- 파일 업로드 영역 -->
+
+            <div
+
+                class="upload-area"
+
+                id="upload-area"
+
+                ondragover="handleDragOver(event)"
+
+                ondragleave="handleDragLeave(event)"
+
+                ondrop="handleDrop(event)"
+
+            >
+
+                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+
+                <p class="upload-text">CSV 파일을 드래그하거나 클릭하여 업로드</p>
+
+                <p class="upload-hint">최대 16MB · index, target 컬럼 필수</p>
+
+                <input
+
+                    type="file"
+
+                    id="file-input"
+
+                    accept=".csv"
+
+                    onchange="handleFileSelect(event)"
+
+                    class="hidden"
+
+                />
+
+                <button
+
+                    class="btn btn-outline"
+
+                    onclick="document.getElementById('file-input').click()"
+
+                >
+
+                    파일 선택
+
+                </button>
+
+            </div>
+
+
+
+            <!-- 선택된 파일 정보 -->
+
+            <div id="file-info" class="file-info hidden">
+
+                <i class="fas fa-file-csv"></i>
+
+                <span id="file-name"></span>
+
+                <span id="file-size" class="file-size"></span>
+
+                <button class="btn-icon" onclick="clearFile()">
+
+                    <i class="fas fa-times"></i>
+
+                </button>
+
+            </div>
+
+
+
+            <!-- 설명 입력 -->
+
+            <div class="form-group">
+
+                <label for="description">
+
+                    제출 설명 <span class="optional">(선택)</span>
+
+                </label>
+
+                <input
+
+                    type="text"
+
+                    id="description"
+
+                    class="form-control"
+
+                    placeholder="예: XGBoost + Feature Engineering v2"
+
+                    maxlength="500"
+
+                />
+
+            </div>
+
+
+
+            <!-- 제출 버튼 -->
+
+            <button
+
+                class="btn btn-primary btn-block"
+
+                id="submit-btn"
+
+                onclick="submitFile()"
+
+                disabled
+
+            >
+
+                <i class="fas fa-paper-plane"></i> 제출하기
+
+            </button>
+
+
+
+            <!-- 제출 결과 -->
+
+            <div id="submit-result" class="submit-result hidden"></div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- ── 탭: 내 제출 목록 ── -->
+
+    <section id="tab-my-submissions" class="tab-content hidden">
+
+        <div class="section-header">
+
+            <h2><i class="fas fa-list"></i> 내 제출 목록</h2>
+
+            <button class="btn btn-sm btn-outline" onclick="loadMySubmissions()">
+
+                <i class="fas fa-sync-alt"></i> 새로고침
+
+            </button>
+
+        </div>
+
+
+
+        <div id="my-submissions-login-required" class="alert alert-warning hidden">
+
+            <i class="fas fa-exclamation-triangle"></i>
+
+            로그인이 필요합니다.
+
+        </div>
+
+
+
+        <div class="table-wrapper" id="my-submissions-wrapper">
+
+            <table class="leaderboard-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th width="60">#</th>
+
+                        <th>파일명</th>
+
+                        <th width="140">Public RMSE</th>
+
+                        <th width="100">상태</th>
+
+                        <th width="180">제출 시각</th>
+
+                        <th width="100">최종 선택</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="my-submissions-body">
+
+                    <tr>
+
+                        <td colspan="6" class="loading-cell">
+
+                            <i class="fas fa-spinner fa-spin"></i> 로딩 중...
+
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+
+        <div class="pagination" id="my-submissions-pagination"></div>
+
+    </section>
+
+
+
+</main>
+
+
+
+<!-- ===================== MODALS ===================== -->
+
+
+
+<!-- 로그인 모달 -->
+
+<div id="login-modal" class="modal hidden">
+
+    <div class="modal-overlay" onclick="closeModal('login-modal')"></div>
+
+    <div class="modal-content">
+
+        <div class="modal-header">
+
+            <h3>로그인</h3>
+
+            <button class="btn-icon" onclick="closeModal('login-modal')">
+
+                <i class="fas fa-times"></i>
+
+            </button>
+
+        </div>
+
+        <div class="modal-body">
+
+            <div class="form-group">
+
+                <label>사용자명</label>
+
+                <input
+
+                    type="text"
+
+                    id="login-username"
+
+                    class="form-control"
+
+                    placeholder="사용자명 입력"
+
+                    onkeydown="if(event.key==='Enter') login()"
+
+                />
+
+            </div>
+
+            <div class="form-group">
+
+                <label>비밀번호</label>
+
+                <input
+
+                    type="password"
+
+                    id="login-password"
+
+                    class="form-control"
+
+                    placeholder="비밀번호 입력"
+
+                    onkeydown="if(event.key==='Enter') login()"
+
+                />
+
+            </div>
+
+            <div id="login-error" class="alert alert-danger hidden"></div>
+
+            <button class="btn btn-primary btn-block" onclick="login()">
+
+                로그인
+
+            </button>
+
+            <p class="modal-footer-text">
+
+                계정이 없으신가요?
+
+                <a href="#" onclick="switchModal('login-modal','register-modal')">
+
+                    회원가입
+
+                </a>
+
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- 회원가입 모달 -->
+
+<div id="register-modal" class="modal hidden">
+
+    <div class="modal-overlay" onclick="closeModal('register-modal')"></div>
+
+    <div class="modal-content">
+
+        <div class="modal-header">
+
+            <h3>회원가입</h3>
+
+            <button class="btn-icon" onclick="closeModal('register-modal')">
+
+                <i class="fas fa-times"></i>
+
+            </button>
+
+        </div>
+
+        <div class="modal-body">
+
+            <div class="form-group">
+
+                <label>사용자명 <span class="required">*</span></label>
+
+                <input
+
+                    type="text"
+
+                    id="reg-username"
+
+                    class="form-control"
+
+                    placeholder="영문, 숫자 조합"
+
+                />
+
+            </div>
+
+            <div class="form-group">
+
+                <label>이메일 <span class="required">*</span></label>
+
+                <input
+
+                    type="email"
+
+                    id="reg-email"
+
+                    class="form-control"
+
+                    placeholder="example@email.com"
+
+                />
+
+                       <div class="form-group">
+
+                <label>팀명 <span class="optional">(선택)</span></label>
+
+                <input
+
+                    type="text"
+
+                    id="reg-teamname"
+
+                    class="form-control"
+
+                    placeholder="팀명 입력 (없으면 사용자명 사용)"
+
+                />
+
+            </div>
+
+            <div class="form-group">
+
+                <label>비밀번호 <span class="required">*</span></label>
+
+                <input
+
+                    type="password"
+
+                    id="reg-password"
+
+                    class="form-control"
+
+                    placeholder="8자 이상"
+
+                />
+
+            </div>
+
+            <div class="form-group">
+
+                <label>비밀번호 확인 <span class="required">*</span></label>
+
+                <input
+
+                    type="password"
+
+                    id="reg-password-confirm"
+
+                    class="form-control"
+
+                    placeholder="비밀번호 재입력"
+
+                />
+
+            </div>
+
+            <div id="register-error" class="alert alert-danger hidden"></div>
+
+            <button class="btn btn-primary btn-block" onclick="register()">
+
+                회원가입
+
+            </button>
+
+            <p class="modal-footer-text">
+
+                이미 계정이 있으신가요?
+
+                <a href="#" onclick="switchModal('register-modal','login-modal')">
+
+                    로그인
+
+                </a>
+
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- 채점 진행 모달 -->
+
+<div id="scoring-modal" class="modal hidden">
+
+    <div class="modal-overlay"></div>
+
+    <div class="modal-content modal-sm">
+
+        <div class="modal-body text-center">
+
+            <div class="scoring-animation">
+
+                <i class="fas fa-calculator fa-3x fa-spin"></i>
+
+            </div>
+
+            <h3>채점 중입니다...</h3>
+
+            <p>RMSE를 계산하고 있습니다. 잠시만 기다려주세요.</p>
+
+            <div class="progress-bar">
+
+                <div class="progress-fill" id="scoring-progress"></div>
+
+            </div>
+
+            <p class="scoring-status" id="scoring-status">파일 검증 중...</p>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- 토스트 알림 -->
+
+<div id="toast-container"></div>
+
+
+
+<script src="js/app.js"></script>
+
+</body>
+
 </html>
